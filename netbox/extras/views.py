@@ -1008,6 +1008,22 @@ class DashboardWidgetDeleteView(LoginRequiredMixin, View):
 
 
 #
+# Function for returning job data - used in scripts and reports
+#
+
+# Return jobs filtered for job model type (Example: `scriptmodule`)
+def get_jobs(module, job_object, jobtype):
+    # Check if it is a supported module.  Return an empty queryset if not
+    object_type = ContentType.objects.get(app_label='extras', model=jobtype)
+    jobs = Job.objects.filter(
+        object_type=object_type,
+        object_id=module.pk,
+        name=job_object.class_name,
+    )
+
+    return jobs
+
+#
 # Reports
 #
 
@@ -1057,16 +1073,12 @@ class ReportView(ContentTypePermissionRequiredMixin, View):
     def get(self, request, module, name):
         module = get_report_module(module, request)
         report = module.reports[name]()
+        jobs = get_jobs(module, report, 'reportmodule')
 
-        object_type = ContentType.objects.get(app_label='extras', model='reportmodule')
-        report.result = Job.objects.filter(
-            object_type=object_type,
-            object_id=module.pk,
-            name=report.name,
-            status__in=JobStatusChoices.TERMINAL_STATE_CHOICES
-        ).first()
+        report.result = jobs.first()
 
         return render(request, 'extras/report.html', {
+            'jobs': jobs,
             'module': module,
             'report': report,
             'form': ReportForm(scheduling_enabled=report.scheduling_enabled),
@@ -1103,6 +1115,7 @@ class ReportView(ContentTypePermissionRequiredMixin, View):
             return redirect('extras:report_result', job_pk=job.pk)
 
         return render(request, 'extras/report.html', {
+            'jobs': get_jobs(module, report, 'reportmodule'),
             'module': module,
             'report': report,
             'form': form,
@@ -1119,6 +1132,7 @@ class ReportSourceView(ContentTypePermissionRequiredMixin, View):
         report = module.reports[name]()
 
         return render(request, 'extras/report/source.html', {
+            'jobs': get_jobs(module, report, 'reportmodule'),
             'module': module,
             'report': report,
             'tab': 'source',
@@ -1135,11 +1149,7 @@ class ReportJobsView(ContentTypePermissionRequiredMixin, View):
         report = module.reports[name]()
 
         object_type = ContentType.objects.get(app_label='extras', model='reportmodule')
-        jobs = Job.objects.filter(
-            object_type=object_type,
-            object_id=module.pk,
-            name=report.class_name
-        )
+        jobs = get_jobs(module, report, 'reportmodule')
 
         jobs_table = JobTable(
             data=jobs,
@@ -1149,6 +1159,7 @@ class ReportJobsView(ContentTypePermissionRequiredMixin, View):
         jobs_table.configure(request)
 
         return render(request, 'extras/report/jobs.html', {
+            'jobs': jobs,
             'module': module,
             'report': report,
             'table': jobs_table,
@@ -1222,19 +1233,6 @@ class ScriptListView(ContentTypePermissionRequiredMixin, View):
 
 def get_script_module(module, request):
     return get_object_or_404(ScriptModule.objects.restrict(request.user), file_path__regex=f"^{module}\\.")
-
-
-# Return jobs filtered for job model type (Example: `scriptmodule`)
-def get_jobs(module, script, jobtype):
-    # Check if it is a supported module.  Return an empty queryset if not
-    object_type = ContentType.objects.get(app_label='extras', model=jobtype)
-    jobs = Job.objects.filter(
-        object_type=object_type,
-        object_id=module.pk,
-        name=script.class_name,
-    )
-
-    return jobs
 
 
 class ScriptView(ContentTypePermissionRequiredMixin, View):
