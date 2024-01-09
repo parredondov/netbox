@@ -1023,6 +1023,7 @@ def get_jobs(module, job_object, jobtype):
 
     return jobs
 
+
 #
 # Reports
 #
