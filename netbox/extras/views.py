@@ -1224,6 +1224,19 @@ def get_script_module(module, request):
     return get_object_or_404(ScriptModule.objects.restrict(request.user), file_path__regex=f"^{module}\\.")
 
 
+# Return jobs filtered for job model type (Example: `scriptmodule`)
+def get_jobs(module, script, jobtype):
+    # Check if it is a supported module.  Return an empty queryset if not
+    object_type = ContentType.objects.get(app_label='extras', model=jobtype)
+    jobs = Job.objects.filter(
+        object_type=object_type,
+        object_id=module.pk,
+        name=script.class_name,
+    )
+
+    return jobs
+
+
 class ScriptView(ContentTypePermissionRequiredMixin, View):
 
     def get_required_permission(self):
@@ -1233,18 +1246,15 @@ class ScriptView(ContentTypePermissionRequiredMixin, View):
         module = get_script_module(module, request)
         script = module.scripts[name]()
         form = script.as_form(initial=normalize_querydict(request.GET))
+        jobs = get_jobs(module, script, 'scriptmodule')
 
         # Look for a pending Job (use the latest one by creation timestamp)
-        object_type = ContentType.objects.get(app_label='extras', model='scriptmodule')
-        script.result = Job.objects.filter(
-            object_type=object_type,
-            object_id=module.pk,
-            name=script.name,
-        ).exclude(
+        script.result = jobs.exclude(
             status__in=JobStatusChoices.TERMINAL_STATE_CHOICES
         ).first()
 
         return render(request, 'extras/script.html', {
+            'jobs': jobs,
             'module': module,
             'script': script,
             'form': form,
@@ -1279,6 +1289,7 @@ class ScriptView(ContentTypePermissionRequiredMixin, View):
             return redirect('extras:script_result', job_pk=job.pk)
 
         return render(request, 'extras/script.html', {
+            'jobs': get_jobs(module, script, 'scriptmodule'),
             'module': module,
             'script': script,
             'form': form,
@@ -1295,6 +1306,7 @@ class ScriptSourceView(ContentTypePermissionRequiredMixin, View):
         script = module.scripts[name]()
 
         return render(request, 'extras/script/source.html', {
+            'jobs': get_jobs(module, script, 'scriptmodule'),
             'module': module,
             'script': script,
             'tab': 'source',
@@ -1309,13 +1321,7 @@ class ScriptJobsView(ContentTypePermissionRequiredMixin, View):
     def get(self, request, module, name):
         module = get_script_module(module, request)
         script = module.scripts[name]()
-
-        object_type = ContentType.objects.get(app_label='extras', model='scriptmodule')
-        jobs = Job.objects.filter(
-            object_type=object_type,
-            object_id=module.pk,
-            name=script.class_name
-        )
+        jobs = get_jobs(module, script, 'scriptmodule')
 
         jobs_table = JobTable(
             data=jobs,
@@ -1325,6 +1331,7 @@ class ScriptJobsView(ContentTypePermissionRequiredMixin, View):
         jobs_table.configure(request)
 
         return render(request, 'extras/script/jobs.html', {
+            'jobs': jobs,
             'module': module,
             'script': script,
             'table': jobs_table,
