@@ -1,11 +1,11 @@
 import datetime
 import decimal
 import json
+import nh3
 import re
 from decimal import Decimal
 from itertools import count, groupby
 
-import bleach
 from django.contrib.contenttypes.models import ContentType
 from django.core import serializers
 from django.db.models import Count, ManyToOneRel, OuterRef, Subquery
@@ -522,19 +522,19 @@ def clean_html(html, schemes):
     }
 
     ALLOWED_ATTRIBUTES = {
-        "div": ['class'],
-        "h1": ["id"], "h2": ["id"], "h3": ["id"], "h4": ["id"], "h5": ["id"], "h6": ["id"],
-        "a": ["href", "title"],
-        "img": ["src", "title", "alt"],
-        "th": ["align"],
-        "td": ["align"],
+        "div": {'class'},
+        "h1": {"id"}, "h2": {"id"}, "h3": {"id"}, "h4": {"id"}, "h5": {"id"}, "h6": {"id"},
+        "a": {"href", "title"},
+        "img": {"src", "title", "alt"},
+        "th": {"align"},
+        "td": {"align"},
     }
 
-    return bleach.clean(
+    return nh3.clean(
         html,
         tags=ALLOWED_TAGS,
         attributes=ALLOWED_ATTRIBUTES,
-        protocols=schemes
+        url_schemes=set(schemes)
     )
 
 
