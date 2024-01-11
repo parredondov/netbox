@@ -1,3 +1,5 @@
+from django.apps import apps
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -1373,3 +1375,21 @@ class RenderMarkdownView(View):
         rendered = render_markdown(form.cleaned_data['text'])
 
         return HttpResponse(rendered)
+
+
+#
+# Plugins
+#
+
+class PluginListView(LoginRequiredMixin, View):
+
+    def get(self, request):
+        plugins = [apps.get_app_config(plugin) for plugin in settings.PLUGINS]
+        table = tables.PluginTable(plugins)
+        # table.configure(request)
+
+        return render(request, 'extras/plugin_list.html', {
+            'plugins': plugins,
+            'active_tab': 'api-tokens',
+            'table': table,
+        })

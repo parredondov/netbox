@@ -136,4 +136,8 @@ urlpatterns = [
 
     # Markdown
     path('render/markdown/', views.RenderMarkdownView.as_view(), name="render_markdown"),
+
+    # Plugins
+    path('plugins/', views.PluginListView.as_view(), name='plugin_list'),
+
 ]

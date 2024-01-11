@@ -20,6 +20,7 @@ __all__ = (
     'ImageAttachmentTable',
     'JournalEntryTable',
     'ObjectChangeTable',
+    'PluginTable',
     'SavedFilterTable',
     'TaggedItemTable',
     'TagTable',
@@ -507,3 +508,17 @@ class JournalEntryTable(NetBoxTable):
         default_columns = (
             'pk', 'created', 'created_by', 'assigned_object_type', 'assigned_object', 'kind', 'comments'
         )
+
+
+class PluginTable(tables.Table):
+    verbose_name = tables.Column()
+    name = tables.Column()
+    author = tables.Column()
+    author_email = tables.Column()
+    description = tables.Column()
+    version = tables.Column()
+
+    class Meta:
+        attrs = {
+            'class': 'table table-hover object-list',
+        }
